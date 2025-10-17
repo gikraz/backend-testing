@@ -10,60 +10,49 @@ const app = express();
 
 app.use(express.json());
 
+
 app.use(cors({
-  origin: "https://ressttyle.vercel.app", 
+  origin: "https://ressttyle.vercel.app",
   methods: ["GET","POST","PUT","DELETE"]
 }));
 
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log("MongoDB connected"))
-.catch(err => console.log(err));
+
+mongoose.connect(process.env.MONGO_URI)
+  .then(() => console.log("MongoDB connected"))
+  .catch(err => console.log(err));
+
 
 const UserSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, enum: ["buyer", "seller"], required: true }
+  name: String,
+  email: { type: String, unique: true },
+  password: String,
+  role: { type: String, enum: ["buyer","seller"] }
 });
 const User = mongoose.model("User", UserSchema);
 
-app.post("/api/auth/register", async (req, res) => {
-  try {
-    const { name, email, password, role } = req.body;
-    if (!name || !email || !password || !role) 
-      return res.status(400).json({ msg: "ყველა ველი აუცილებელია" });
+app.post("/api/auth/register", async (req,res)=>{
+  const { name,email,password,role } = req.body;
+  if(!name || !email || !password || !role)
+    return res.status(400).json({ msg: "ყველა ველი აუცილებელია" });
+  const existingUser = await User.findOne({ email });
+  if(existingUser) return res.status(400).json({ msg: "Email უკვე გამოყენებულია" });
 
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return res.status(400).json({ msg: "Email უკვე გამოყენებულია" });
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ name, email, password: hashedPassword, role });
-    await newUser.save();
-
-    res.status(201).json({ msg: "მომხმარებელი შექმნილია" });
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
+  const hashed = await bcrypt.hash(password,10);
+  const user = new User({name,email,password:hashed,role});
+  await user.save();
+  res.json({ msg: "User created" });
 });
 
-app.post("/api/auth/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ msg: "მომხმარებელი არ მოიძებნა" });
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ msg: "პაროლი არასწორია" });
-
-    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "1d" });
-    res.json({ token, user: { id: user._id, name: user.name, role: user.role } });
-  } catch (err) {
-    res.status(500).json({ msg: err.message });
-  }
+app.post("/api/auth/login", async (req,res)=>{
+  const { email,password } = req.body;
+  const user = await User.findOne({ email });
+  if(!user) return res.status(400).json({ msg:"User not found" });
+  const match = await bcrypt.compare(password,user.password);
+  if(!match) return res.status(400).json({ msg:"Wrong password" });
+  const token = jwt.sign({ id:user._id,role:user.role },process.env.JWT_SECRET,{expiresIn:"1d"});
+  res.json({ token, user:{ id:user._id, name:user.name, role:user.role }});
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server started on port ${PORT}`));
+app.listen(PORT,()=>console.log("Server started on port "+PORT));
