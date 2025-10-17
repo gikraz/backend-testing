@@ -7,15 +7,13 @@ const authRoutes = require("./routes/auth");
 dotenv.config();
 const app = express();
 
-
 app.use(express.json());
 
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "https://re-style-nu.vercel.app",
+  "https://ressttyle.vercel.app",
 ];
-
 
 app.use(
   cors({
@@ -34,8 +32,13 @@ app.use(
 
 app.options("*", cors());
 
-app.get("/", (_, res) => res.send("✅ Re-Style backend is running"));
 
+app.get("/", (_, res) => {
+  res.send(`
+    <h1>✅ Backend Auth API Running</h1>
+    <p>Deployed on <a href="https://vercel.com/gikrazs-projects/backend-testing" target="_blank">Vercel</a></p>
+  `);
+});
 
 app.use("/api/auth", authRoutes);
 
