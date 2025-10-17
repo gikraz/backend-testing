@@ -12,7 +12,7 @@ app.use(express.json());
 
 
 app.use(cors({
-  origin: "https://ressttyle.vercel.app",
+  origin: "https://ressttyle-qajh.vercel.app/",
   methods: ["GET","POST","PUT","DELETE"]
 }));
 
