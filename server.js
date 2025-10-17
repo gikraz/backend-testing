@@ -7,19 +7,20 @@ const authRoutes = require("./routes/auth");
 dotenv.config();
 const app = express();
 
+
 app.use(express.json());
 
 
 const allowedOrigins = [
   "http://localhost:5173",
-  "http://localhost:3000",
   "https://re-style-nu.vercel.app",
 ];
+
 
 app.use(
   cors({
     origin: function (origin, callback) {
-      if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         callback(new Error("Not allowed by CORS"));
@@ -31,11 +32,12 @@ app.use(
   })
 );
 
+app.options("*", cors());
+
 app.get("/", (_, res) => res.send("✅ Re-Style backend is running"));
 
 
 app.use("/api/auth", authRoutes);
-
 
 mongoose
   .connect(process.env.MONGO_URI)
