@@ -9,18 +9,14 @@ dotenv.config();
 const app = express();
 
 app.use(express.json());
-
-
 app.use(cors({
-  origin: "https://ressttyle-qajh.vercel.app/",
+  origin: "https://ressttyle-qajh.vercel.app",
   methods: ["GET","POST","PUT","DELETE"]
 }));
-
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB connected"))
   .catch(err => console.log(err));
-
 
 const UserSchema = new mongoose.Schema({
   name: String,
@@ -29,6 +25,10 @@ const UserSchema = new mongoose.Schema({
   role: { type: String, enum: ["buyer","seller"] }
 });
 const User = mongoose.model("User", UserSchema);
+
+app.get("/", (req,res) => {
+  res.send("Backend is running!");
+});
 
 app.post("/api/auth/register", async (req,res)=>{
   const { name,email,password,role } = req.body;
@@ -43,7 +43,6 @@ app.post("/api/auth/register", async (req,res)=>{
   res.json({ msg: "User created" });
 });
 
-
 app.post("/api/auth/login", async (req,res)=>{
   const { email,password } = req.body;
   const user = await User.findOne({ email });
@@ -52,6 +51,10 @@ app.post("/api/auth/login", async (req,res)=>{
   if(!match) return res.status(400).json({ msg:"Wrong password" });
   const token = jwt.sign({ id:user._id,role:user.role },process.env.JWT_SECRET,{expiresIn:"1d"});
   res.json({ token, user:{ id:user._id, name:user.name, role:user.role }});
+});
+
+app.use((req,res) => {
+  res.status(404).json({ msg:"Route not found" });
 });
 
 const PORT = process.env.PORT || 5000;
