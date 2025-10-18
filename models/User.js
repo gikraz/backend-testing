@@ -11,7 +11,6 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ პაროლის hash-ვა user-ის შენახვამდე
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
   const salt = await bcrypt.genSalt(10);
@@ -19,7 +18,6 @@ userSchema.pre("save", async function (next) {
   next();
 });
 
-// ✅ პაროლის შემოწმების მეთოდი (login-ისთვის)
 userSchema.methods.matchPassword = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
