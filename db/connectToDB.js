@@ -1,17 +1,21 @@
-const mongoose = require("mongoose");
-require("dotenv").config();
+import mongoose from "mongoose";
 
-const connectToDb = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URL, {
+const MONGO_URI = process.env.MONGO_URI;
+if (!MONGO_URI) throw new Error("MONGO_URI is not defined");
+
+let cached = global.mongoose;
+if (!cached) cached = global.mongoose = { conn: null, promise: null };
+
+export default async function connectToDatabase() {
+  if (cached.conn) return cached.conn;
+
+  if (!cached.promise) {
+    cached.promise = mongoose.connect(MONGO_URI, {
       useNewUrlParser: true,
       useUnifiedTopology: true,
-    });
-    console.log("Connected successfully to MongoDB");
-  } catch (e) {
-    console.error("Couldn't connect to MongoDB:", e.message);
-    process.exit(1); 
+    }).then((mongoose) => mongoose);
   }
-};
 
-module.exports = connectToDb;
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
