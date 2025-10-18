@@ -1,61 +1,73 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const cors = require("cors");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const cors = require("cors");
-const dotenv = require("dotenv");
 
-dotenv.config();
 const app = express();
 
 app.use(express.json());
-app.use(cors({
-  origin: "https://ressttyle-qajh.vercel.app",
-  methods: ["GET","POST","PUT","DELETE"]
-}));
 
-mongoose.connect(process.env.MONGO_URI)
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "https://ressttyle.vercel.app"], 
+    credentials: true,
+  })
+);
+
+mongoose
+  .connect("mongodb+srv://<USERNAME>:<PASSWORD>@cluster0.mongodb.net/authDemo?retryWrites=true&w=majority", {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  })
   .then(() => console.log("MongoDB connected"))
-  .catch(err => console.log(err));
+  .catch((err) => console.log(err));
 
-const UserSchema = new mongoose.Schema({
-  name: String,
-  email: { type: String, unique: true },
-  password: String,
-  role: { type: String, enum: ["buyer","seller"] }
+const userSchema = new mongoose.Schema({
+  name: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
+  password: { type: String, required: true },
 });
-const User = mongoose.model("User", UserSchema);
 
-app.get("/", (req,res) => {
+const User = mongoose.model("User", userSchema);
+
+app.get("/", (req, res) => {
   res.send("Backend is running!");
 });
 
-app.post("/api/auth/register", async (req,res)=>{
-  const { name,email,password,role } = req.body;
-  if(!name || !email || !password || !role)
-    return res.status(400).json({ msg: "ყველა ველი აუცილებელია" });
-  const existingUser = await User.findOne({ email });
-  if(existingUser) return res.status(400).json({ msg: "Email უკვე გამოყენებულია" });
+app.post("/api/auth/signup", async (req, res) => {
+  const { name, email, password } = req.body;
+  try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser)
+      return res.status(400).json({ msg: "User already exists" });
 
-  const hashed = await bcrypt.hash(password,10);
-  const user = new User({name,email,password:hashed,role});
-  await user.save();
-  res.json({ msg: "User created" });
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = new User({ name, email, password: hashedPassword });
+    await user.save();
+
+    const token = jwt.sign({ id: user._id }, "secret123", { expiresIn: "1h" });
+    res.json({ token, user: { id: user._id, name, email } });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error" });
+  }
 });
 
-app.post("/api/auth/login", async (req,res)=>{
-  const { email,password } = req.body;
-  const user = await User.findOne({ email });
-  if(!user) return res.status(400).json({ msg:"User not found" });
-  const match = await bcrypt.compare(password,user.password);
-  if(!match) return res.status(400).json({ msg:"Wrong password" });
-  const token = jwt.sign({ id:user._id,role:user.role },process.env.JWT_SECRET,{expiresIn:"1d"});
-  res.json({ token, user:{ id:user._id, name:user.name, role:user.role }});
-});
+app.post("/api/auth/login", async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ msg: "Invalid credentials" });
 
-app.use((req,res) => {
-  res.status(404).json({ msg:"Route not found" });
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ msg: "Invalid credentials" });
+
+    const token = jwt.sign({ id: user._id }, "secret123", { expiresIn: "1h" });
+    res.json({ token, user: { id: user._id, name: user.name, email: user.email } });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error" });
+  }
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT,()=>console.log("Server started on port "+PORT));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
