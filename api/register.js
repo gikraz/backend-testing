@@ -13,11 +13,7 @@ const userSchema = new mongoose.Schema({
 });
 
 let User;
-try {
-  User = mongoose.model("User");
-} catch {
-  User = mongoose.model("User", userSchema);
-}
+try { User = mongoose.model("User"); } catch { User = mongoose.model("User", userSchema); }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -28,13 +24,10 @@ export default async function handler(req, res) {
   if (req.method !== "POST") return res.status(405).json({ message: "Method not allowed" });
 
   const { username, email, password, role } = req.body;
-
-  if (!username || !email || !password)
-    return res.status(400).json({ message: "All fields are required" });
+  if (!username || !email || !password) return res.status(400).json({ message: "All fields required" });
 
   try {
     await connectToDatabase();
-
     const existingUser = await User.findOne({ email });
     if (existingUser) return res.status(400).json({ message: "User already exists" });
 
@@ -43,7 +36,6 @@ export default async function handler(req, res) {
     await user.save();
 
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
-
     res.json({ success: true, token, user: { id: user._id, username, email, role } });
   } catch (err) {
     console.error(err);

@@ -15,11 +15,7 @@ const userSchema = new mongoose.Schema({
 });
 
 let User;
-try {
-  User = mongoose.model("User");
-} catch {
-  User = mongoose.model("User", userSchema);
-}
+try { User = mongoose.model("User"); } catch { User = mongoose.model("User", userSchema); }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -42,21 +38,13 @@ export default async function handler(req, res) {
     const { sub: googleId, email, name, picture } = payload;
 
     await connectToDatabase();
-
     let user = await User.findOne({ email });
     if (!user) {
-      user = new User({
-        username: name || email.split("@")[0],
-        email,
-        googleId,
-        avatar: picture,
-        role: "buyer",
-      });
+      user = new User({ username: name || email.split("@")[0], email, googleId, avatar: picture, role: "buyer" });
       await user.save();
     }
 
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
-
     res.json({ success: true, token, user: { id: user._id, username: user.username, email, role: user.role } });
   } catch (err) {
     console.error(err);

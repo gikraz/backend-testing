@@ -13,11 +13,7 @@ const userSchema = new mongoose.Schema({
 });
 
 let User;
-try {
-  User = mongoose.model("User");
-} catch {
-  User = mongoose.model("User", userSchema);
-}
+try { User = mongoose.model("User"); } catch { User = mongoose.model("User", userSchema); }
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -32,7 +28,6 @@ export default async function handler(req, res) {
 
   try {
     await connectToDatabase();
-
     const user = await User.findOne({ email });
     if (!user) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -40,7 +35,6 @@ export default async function handler(req, res) {
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
     const token = jwt.sign({ id: user._id, role: user.role }, JWT_SECRET, { expiresIn: "7d" });
-
     res.json({ success: true, token, user: { id: user._id, username: user.username, email, role: user.role } });
   } catch (err) {
     console.error(err);
